@@ -1,15 +1,15 @@
-import config from '../config'
-import { initProxy } from './proxy'
-import { initState } from './state'
-import { initRender } from './render'
-import { initEvents } from './events'
-import { mark, measure } from '../util/perf'
-import { initLifecycle, callHook } from './lifecycle'
-import { initProvide, initInjections } from './inject'
-import { extend, mergeOptions, formatComponentName } from '../util/index'
 import type { Component } from 'types/component'
 import type { InternalComponentOptions } from 'types/options'
 import { EffectScope } from 'v3/reactivity/effectScope'
+import config from '../config'
+import { extend, formatComponentName, mergeOptions } from '../util/index'
+import { mark, measure } from '../util/perf'
+import { initEvents } from './events'
+import { initInjections, initProvide } from './inject'
+import { callHook, initLifecycle } from './lifecycle'
+import { initProxy } from './proxy'
+import { initRender } from './render'
+import { initState } from './state'
 
 let uid = 0
 
@@ -36,6 +36,7 @@ export function initMixin(Vue: typeof Component) {
     vm._scope = new EffectScope(true /* detached */)
     vm._scope._vm = true
     // merge options
+    // 合并options      
     if (options && options._isComponent) {
       // optimize internal component instantiation
       // since dynamic options merging is pretty slow, and none of the
@@ -56,12 +57,15 @@ export function initMixin(Vue: typeof Component) {
     }
     // expose real self
     vm._self = vm
-    initLifecycle(vm)
-    initEvents(vm)
-    initRender(vm)
+    // 准备组件实例该有的属性和方法
+    initLifecycle(vm) // 初始化组件实例相关属性，$parent/$root/$children/$refs
+    initEvents(vm) // 组件自定义事件监听
+    initRender(vm) // 声明_c和$createElement
+
+    // 初始化组件的状态
     callHook(vm, 'beforeCreate', undefined, false /* setContext */)
-    initInjections(vm) // resolve injections before data/props
-    initState(vm)
+    initInjections(vm) // resolve injections before data/props 祖辈注入
+    initState(vm) // 组件本身的状态，props/data/methods/watch...
     initProvide(vm) // resolve provide after data/props
     callHook(vm, 'created')
 

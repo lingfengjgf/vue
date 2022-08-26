@@ -1,11 +1,7 @@
 import type { Component } from 'types/component'
 import {
-  tip,
-  toArray,
-  isArray,
-  hyphenate,
-  formatComponentName,
-  invokeWithErrorHandling
+  formatComponentName, hyphenate, invokeWithErrorHandling, isArray, tip,
+  toArray
 } from '../util/index'
 import { updateListeners } from '../vdom/helpers/index'
 
@@ -13,7 +9,9 @@ export function initEvents(vm: Component) {
   vm._events = Object.create(null)
   vm._hasHookEvent = false
   // init parent attached events
+  // 获取在父组件上声明的事件回调
   const listeners = vm.$options._parentListeners
+  // 监听这个事件，并指定回调函数
   if (listeners) {
     updateComponentListeners(vm, listeners)
   }
