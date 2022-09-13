@@ -1,22 +1,13 @@
-import Dep from './dep'
+import { isReadonly, isRef, TrackOpTypes, TriggerOpTypes } from '../../v3'
+import {
+  def, hasChanged, hasOwn, hasProto, isArray, isObject,
+  isPlainObject,
+  isPrimitive, isServerRendering, isUndef,
+  isValidArrayIndex, noop, warn
+} from '../util/index'
 import VNode from '../vdom/vnode'
 import { arrayMethods } from './array'
-import {
-  def,
-  warn,
-  hasOwn,
-  isArray,
-  hasProto,
-  isObject,
-  isPlainObject,
-  isPrimitive,
-  isUndef,
-  isValidArrayIndex,
-  isServerRendering,
-  hasChanged,
-  noop
-} from '../util/index'
-import { isReadonly, isRef, TrackOpTypes, TriggerOpTypes } from '../../v3'
+import Dep from './dep'
 
 const arrayKeys = Object.getOwnPropertyNames(arrayMethods)
 
@@ -50,12 +41,16 @@ export class Observer {
   dep: Dep
   vmCount: number // number of vms that have this object as root $data
 
+  // 参数1:要做响应式处理的对象
+  // 参数2:是否是浅复制
   constructor(public value: any, public shallow = false, public mock = false) {
     // this.value = value
     this.dep = mock ? mockDep : new Dep()
     this.vmCount = 0
+    // 定义__ob__属性
     def(value, '__ob__', this)
     if (isArray(value)) {
+      // 数组的响应式处理
       if (!mock) {
         if (hasProto) {
           /* eslint-disable no-proto */
@@ -72,14 +67,17 @@ export class Observer {
         this.observeArray(value)
       }
     } else {
+      // 对象的响应式处理
       /**
        * Walk through all properties and convert them into
        * getter/setters. This method should only be called when
        * value type is Object.
        */
       const keys = Object.keys(value)
+      // 对每一个key进行响应式处理
       for (let i = 0; i < keys.length; i++) {
         const key = keys[i]
+        // 定义响应式，每次只能处理一个属性
         defineReactive(value, key, NO_INIITIAL_VALUE, undefined, shallow, mock)
       }
     }
@@ -110,6 +108,8 @@ export function observe(
   if (!isObject(value) || isRef(value) || value instanceof VNode) {
     return
   }
+  
+  // 创建了一个observer实例
   let ob: Observer | void
   if (hasOwn(value, '__ob__') && value.__ob__ instanceof Observer) {
     ob = value.__ob__
@@ -153,12 +153,16 @@ export function defineReactive(
     val = obj[key]
   }
 
+  // 如果当前val是对象，则需要递归处理
+  // 每一个对象都有一个__ob__与之对应
   let childOb = !shallow && observe(val, false, mock)
+  // 属性拦截
   Object.defineProperty(obj, key, {
     enumerable: true,
     configurable: true,
     get: function reactiveGetter() {
       const value = getter ? getter.call(obj) : val
+      // 依赖收集
       if (Dep.target) {
         if (__DEV__) {
           dep.depend({
@@ -197,6 +201,7 @@ export function defineReactive(
       } else {
         val = newVal
       }
+      // 如果设置的新值是一个对象，仍然需要做响应式处理
       childOb = !shallow && observe(newVal, false, mock)
       if (__DEV__) {
         dep.notify({
@@ -207,6 +212,7 @@ export function defineReactive(
           oldValue: value
         })
       } else {
+        // 通知更新
         dep.notify()
       }
     }

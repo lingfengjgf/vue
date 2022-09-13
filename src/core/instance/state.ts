@@ -1,36 +1,19 @@
-import config from '../config'
-import Watcher from '../observer/watcher'
-import Dep, { pushTarget, popTarget } from '../observer/dep'
-import { isUpdatingChildComponent } from './lifecycle'
 import { initSetup } from 'v3/apiSetup'
+import config from '../config'
+import Dep, { popTarget, pushTarget } from '../observer/dep'
+import Watcher from '../observer/watcher'
+import { isUpdatingChildComponent } from './lifecycle'
 
 import {
-  set,
-  del,
-  observe,
-  defineReactive,
-  toggleObserving
+  defineReactive, del,
+  observe, set, toggleObserving
 } from '../observer/index'
 
-import {
-  warn,
-  bind,
-  noop,
-  hasOwn,
-  isArray,
-  hyphenate,
-  isReserved,
-  handleError,
-  nativeWatch,
-  validateProp,
-  isPlainObject,
-  isServerRendering,
-  isReservedAttribute,
-  invokeWithErrorHandling,
-  isFunction
-} from '../util/index'
 import type { Component } from 'types/component'
 import { shallowReactive, TrackOpTypes } from 'v3'
+import {
+  bind, handleError, hasOwn, hyphenate, invokeWithErrorHandling, isArray, isFunction, isPlainObject, isReserved, isReservedAttribute, isServerRendering, nativeWatch, noop, validateProp, warn
+} from '../util/index'
 
 const sharedPropertyDefinition = {
   enumerable: true,
@@ -51,19 +34,25 @@ export function proxy(target: Object, sourceKey: string, key: string) {
 
 export function initState(vm: Component) {
   const opts = vm.$options
+  // 初始化属性
   if (opts.props) initProps(vm, opts.props)
 
   // Composition API
+  // 初始化setup
   initSetup(vm)
 
+  // 初始化methods
   if (opts.methods) initMethods(vm, opts.methods)
+  // 初始化数据
   if (opts.data) {
     initData(vm)
   } else {
     const ob = observe((vm._data = {}))
     ob && ob.vmCount++
   }
+  // 初始化计算属性
   if (opts.computed) initComputed(vm, opts.computed)
+  // 初始化watch
   if (opts.watch && opts.watch !== nativeWatch) {
     initWatch(vm, opts.watch)
   }
@@ -155,6 +144,7 @@ function initData(vm: Component) {
     }
   }
   // observe data
+  // 响应式处理
   const ob = observe(data)
   ob && ob.vmCount++
 }
