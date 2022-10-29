@@ -10,14 +10,18 @@
     },
     created(){
       console.log('created!');
+      setTimeout(()=>{
+        this.foo = 'bar'
+      },1000)
     },
+    
     render(){
       return document.createTextNode(this.foo)
     }
   }).$mount('#app')
 
-  const obj={foo:{bar:'bar'}};
-  defineReactive(obj,'foo',obj['foo']);
-  obj.foo.bar;
+  // const obj={foo:{bar:'bar'}};
+  // defineReactive(obj,'foo',obj['foo']);
+  // obj.foo.bar;
 
 </script>

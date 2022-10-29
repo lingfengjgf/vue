@@ -11,6 +11,7 @@ Vue.prototype._init=function(options){
   // beforeCreated
   callHook(this,'beforeCreated');
   // state init
+  initState(this);
   // ...
   // created
   callHook(this,'created');
@@ -23,13 +24,53 @@ function callHook(vm,hook){
   }
 }
 
+function initState(vm){
+  const opts = vm.$options;
+  // props
+  // setup
+  // methods
+  // data
+  if (opts.data){
+    initData(vm);
+  }
+  // computed
+  // watch
+}
+
+function initData(vm){
+  const data = vm._data = vm.$options.data.call(vm);
+
+  // 代理data中的每一个属性
+  const keys = Object.keys(data);
+  let i = keys.length;
+  while (i--) {
+    const key = keys[i];
+    proxy(vm, `_data`, key);
+  }
+  // 响应式处理
+  observe(data);
+}
+
+// 代理指定对象的某个key到sourcekey上
+function proxy(vm, sourceKey, key){
+  Object.defineProperty(vm,key,{
+    get(){
+      return vm[sourceKey][key];
+    },
+    set(val){
+      vm[sourceKey][key] = val;
+    }
+  })
+}
+
 Vue.prototype.$mount=function(el){
   // parent
   const parent=document.querySelector(el);
   // data
-  const data=this.$options.data();
+  // const data=this._data;
+
   // append
-  const node=this.$options.render.call(data);
+  const node=this.$options.render.call(this);
   parent.appendChild(node);
 }
 
