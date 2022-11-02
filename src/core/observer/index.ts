@@ -45,6 +45,7 @@ export class Observer {
   // 参数2:是否是浅复制
   constructor(public value: any, public shallow = false, public mock = false) {
     // this.value = value
+    // 在用户动态新增或删除对象属性、数组项时通知更新
     this.dep = mock ? mockDep : new Dep()
     this.vmCount = 0
     // 定义__ob__属性
@@ -163,6 +164,8 @@ export function defineReactive(
     get: function reactiveGetter() {
       const value = getter ? getter.call(obj) : val
       // 依赖收集
+      // Dep 组件中的每一个动态项
+      // Dep.target 每个组件对应的Watcher实例
       if (Dep.target) {
         if (__DEV__) {
           dep.depend({

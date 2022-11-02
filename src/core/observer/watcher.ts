@@ -135,6 +135,7 @@ export default class Watcher implements DepTarget {
     let value
     const vm = this.vm
     try {
+      // 执行一次更新函数
       value = this.getter.call(vm, vm)
     } catch (e: any) {
       if (this.user) {
@@ -161,6 +162,7 @@ export default class Watcher implements DepTarget {
     const id = dep.id
     if (!this.newDepIds.has(id)) {
       this.newDepIds.add(id)
+      // 在watcher实例上添加组件上的所有动态项dep
       this.newDeps.push(dep)
       if (!this.depIds.has(id)) {
         dep.addSub(this)

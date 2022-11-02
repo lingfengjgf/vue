@@ -29,6 +29,7 @@ export default class Dep {
   }
 
   addSub(sub: DepTarget) {
+    // 将对应的watcher保存在dep上
     this.subs.push(sub)
   }
 
@@ -50,6 +51,7 @@ export default class Dep {
 
   notify(info?: DebuggerEventExtraInfo) {
     // stabilize the subscriber list first
+    // subs中存的是和当前dep有关的所有watcher
     const subs = this.subs.slice()
     if (__DEV__ && !config.async) {
       // subs aren't sorted in scheduler if not running async
@@ -57,6 +59,7 @@ export default class Dep {
       // order
       subs.sort((a, b) => a.id - b.id)
     }
+    // 循环执行，通知更新
     for (let i = 0, l = subs.length; i < l; i++) {
       if (__DEV__ && info) {
         const sub = subs[i]
@@ -79,6 +82,7 @@ const targetStack: Array<DepTarget | null | undefined> = []
 
 export function pushTarget(target?: DepTarget | null) {
   targetStack.push(target)
+  // 将当前组件的Watcher实例保存在Dep.target上
   Dep.target = target
 }
 
