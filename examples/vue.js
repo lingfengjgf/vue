@@ -1,3 +1,4 @@
+
 // mini-vue
 function Vue(options){
   this._init(options);
@@ -69,9 +70,16 @@ Vue.prototype.$mount=function(el){
   // data
   // const data=this._data;
 
-  // append
-  const node=this.$options.render.call(this);
-  parent.appendChild(node);
+  const updateComponent=()=>{
+
+      // 清空父元素内容
+      parent.innerHTML = '';
+      // append
+      const node=this.$options.render.call(this);
+      parent.appendChild(node);
+  }
+
+  new Watcher(this,updateComponent);
 }
 
 // 响应式处理
@@ -79,14 +87,21 @@ function defineReactive(obj,key,val={}){
   // 递归处理
   observe(val);
 
+  const dep = new Dep();
   Object.defineProperty(obj,key,{
     get(){
       console.log('get ',key);
+      console.log('Dep.target ',Dep.target);
+      if(Dep.target){
+        dep.depend();
+        console.log('subs ',dep.subs);
+      }
       return val
     },
     set(newVal){
       console.log('set ',key);
       val=newVal;
+      dep.notify();
     }
   })
 }
@@ -127,6 +142,62 @@ class Observer{
     const keys=Object.keys(obj);
     for (let i = 0; i < keys.length; i++) {
       defineReactive(obj,keys[i],obj[keys[i]]);
+    }
+  }
+}
+
+class Watcher {
+  constructor(vm,expOrFn){
+    this.vm = vm;
+    this.getter = expOrFn;
+    this.newDeps = [];
+    this.newDepIds = new Set();
+
+    this.get();
+  }
+
+  get(){
+    Dep.target = this;
+
+    const vm = this.vm;
+    try {
+      this.getter.call(vm,vm);
+    } catch (error) {
+      throw error
+    } finally {
+      Dep.target = undefined;
+    }
+    
+  }
+
+  addDep(dep){
+    if(!this.newDepIds.has(dep.id)){
+      this.newDeps.push(dep);
+      this.newDepIds.add(dep.id);
+
+      dep.addSub(this);
+    }
+  }
+}
+
+let uid = 0;
+class Dep {
+  constructor(){
+    this.id = uid++;
+    this.subs = [];
+  }
+
+  depend(){
+    Dep.target.addDep(this);
+  }
+
+  addSub(watcher){
+    this.subs.push(watcher);
+  }
+
+  notify(){
+    for (const sub of this.subs) {
+      sub.getter();
     }
   }
 }
