@@ -72,13 +72,14 @@ Vue.prototype.$mount=function(el){
 
   const updateComponent=()=>{
 
-      // 清空父元素内容
+      // 清空宿主内容
       parent.innerHTML = '';
       // append
       const node=this.$options.render.call(this);
       parent.appendChild(node);
   }
 
+  // 创建watcher实例，作为当前组件的渲染watcher
   new Watcher(this,updateComponent);
 }
 
@@ -87,11 +88,13 @@ function defineReactive(obj,key,val={}){
   // 递归处理
   observe(val);
 
+  // 每个属性都有一个dep
   const dep = new Dep();
   Object.defineProperty(obj,key,{
     get(){
       console.log('get ',key);
       console.log('Dep.target ',Dep.target);
+      // 判断依赖收集的目标是否存在
       if(Dep.target){
         dep.depend();
         console.log('subs ',dep.subs);
@@ -101,6 +104,7 @@ function defineReactive(obj,key,val={}){
     set(newVal){
       console.log('set ',key);
       val=newVal;
+      // 变更通知
       dep.notify();
     }
   })
@@ -150,6 +154,7 @@ class Watcher {
   constructor(vm,expOrFn){
     this.vm = vm;
     this.getter = expOrFn;
+    // 保存管理的所有dep
     this.newDeps = [];
     this.newDepIds = new Set();
 
@@ -157,26 +162,34 @@ class Watcher {
   }
 
   get(){
+    // 设置依赖目标
     Dep.target = this;
 
     const vm = this.vm;
+    // 调用getter
     try {
       this.getter.call(vm,vm);
     } catch (error) {
       throw error
     } finally {
+      // 完成依赖收集后清空静态变量
       Dep.target = undefined;
     }
     
   }
 
   addDep(dep){
+    // 去重
     if(!this.newDepIds.has(dep.id)){
       this.newDeps.push(dep);
       this.newDepIds.add(dep.id);
 
       dep.addSub(this);
     }
+  }
+
+  update(){
+    this.get();
   }
 }
 
@@ -187,17 +200,19 @@ class Dep {
     this.subs = [];
   }
 
+  // 通知watcher添加dep
   depend(){
     Dep.target.addDep(this);
   }
 
+  // 在dep中保存当前watcher
   addSub(watcher){
     this.subs.push(watcher);
   }
 
   notify(){
     for (const sub of this.subs) {
-      sub.getter();
+      sub.update();
     }
   }
 }
