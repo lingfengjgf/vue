@@ -5,18 +5,27 @@
   new Vue({
     data(){
       return {
-        foo:'foo'
+        foo:'foo',
+        obj:{},
+        arr:[1,2,{n:1}]
       }
     },
     created(){
-      console.log('created!');
+      console.log('created!');  
       setTimeout(()=>{
-        this.foo = 'bar'
+        this.foo = 'bar',
+        this.$set(this.obj,"a","a");
+        this.arr.push(4);
+        this.$delete(this.arr,2);
+        this.$set(this.arr,3,6);
       },1000)
+      console.log('arr:',this.arr);
     },
     
     render(){
-      return document.createTextNode(this.foo)
+      let a=this.obj.a||'';
+      let arr=this.arr.join(',')
+      return document.createTextNode(this.foo + a + arr)
     }
   }).$mount('#app')
 

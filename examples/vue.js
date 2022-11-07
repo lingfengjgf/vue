@@ -17,6 +17,41 @@ Vue.prototype._init=function(options){
   // created
   callHook(this,'created');
 }
+Vue.set = Vue.prototype.$set = set;
+Vue.delete = Vue.prototype.$delete = del;
+// Vue.set
+function set (target,key,val) {
+  if(Array.isArray(target)){
+    target.length = Math.max(target.length, key);
+    target.splice(key, 1, val);
+    // splice方法已经处理过了，会自动更新
+    return val;
+  }
+  let ob = target.__ob__;
+  if(!ob){
+    target[key]= val;
+    return val;
+  }
+  console.log("ob:",ob);
+  // 设置动态属性拦截
+  defineReactive(target,key,val);
+
+  // 变更通知
+  ob.dep.notify();
+} 
+
+// Vue.delete
+function del (target,key){
+  if(Array.isArray(target)){
+    target.splice(key, 1);
+    return ;
+  }
+  let ob = target.__ob__;
+  delete target[key];
+  if(ob){
+    ob.dep.notify();
+  }
+}
 
 function callHook(vm,hook){
   const hooks=vm.$options[hook];
@@ -86,7 +121,7 @@ Vue.prototype.$mount=function(el){
 // 响应式处理
 function defineReactive(obj,key,val={}){
   // 递归处理
-  observe(val);
+  const childOb = observe(val);
 
   // 每个属性都有一个dep
   const dep = new Dep();
@@ -98,6 +133,12 @@ function defineReactive(obj,key,val={}){
       if(Dep.target){
         dep.depend();
         console.log('subs ',dep.subs);
+        if(childOb){
+          childOb.dep.depend();
+          if(Array.isArray(val)){
+            dependArray(val);
+          }
+        }
       }
       return val
     },
@@ -108,6 +149,19 @@ function defineReactive(obj,key,val={}){
       dep.notify();
     }
   })
+}
+
+function dependArray(items){
+  for (const item of items) {
+    // 如果item有ob，则对它伴生的dep做依赖收集
+    if(item&&item.__ob__){
+      item.__ob__.dep.depend();
+    }
+    // 如果item也是数组，向下递归
+    if(Array.isArray(item)){
+      dependArray(item)
+    }
+  }
 }
 
 function observe(obj){
@@ -126,6 +180,9 @@ function observe(obj){
 
 class Observer{
   constructor(value){
+    // 创建一个伴生的dep实例，负责通知动态属性的添加
+    this.dep = new Dep();
+
     // 定义__ob__属性
     Object.defineProperty(value,'__ob__',{
       value:this,
@@ -136,9 +193,17 @@ class Observer{
     // 数组和对象的处理方式不同
     if(Array.isArray(value)){
       //array
+      // 覆盖原型
+      value.__proto__ = arrayMethods;
+      this.observeArray(value);
     }else{
       //object
       this.walk(value);
+    }
+  }
+  observeArray(items){
+    for (const item of items) {
+      observe(item);
     }
   }
   walk(obj){
@@ -216,3 +281,41 @@ class Dep {
     }
   }
 }
+
+// 获取数组原型
+const arrayProto = Array.prototype;
+const arrayMethods = Object.create(arrayProto);
+
+// 7个需要覆盖的方法
+const methodsToPatch = ['push','pop','shift','unshift','splice','sort','reverse'];
+
+methodsToPatch.forEach(function (method){
+  // 保存原始方法
+  const origin = arrayMethods[method];
+
+  Object.defineProperty(arrayMethods,method,{
+    value:function mutator(...args){
+      // 执行原始操作
+      const result = origin.apply(this,args);
+
+      // 对有可能新增元素的操作做处理，新元素要响应式处理
+      const ob = this.__ob__;
+      let inserted;
+      switch (method) {
+        case 'push':
+        case 'unshift':
+          inserted = args;
+          break;
+        case 'splice':
+          // splice不一定是新增元素，当有2个以上的参数时，splice才有新增元素
+          inserted = args.slice(2);
+          break;
+      }
+      if(inserted) {
+        ob.observeArray(args);
+      }
+      ob.dep.notify();
+      return result;
+    }
+  })
+})
