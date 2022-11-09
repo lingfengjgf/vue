@@ -164,6 +164,7 @@ function callActivatedHooks(queue) {
  * pushed when the queue is being flushed.
  */
 export function queueWatcher(watcher: Watcher) {
+  // 去重，每个组件只有一个watcher，每个watcher只入队一次
   const id = watcher.id
   if (has[id] != null) {
     return
@@ -193,6 +194,7 @@ export function queueWatcher(watcher: Watcher) {
       flushSchedulerQueue()
       return
     }
+    // 异步执行
     nextTick(flushSchedulerQueue)
   }
 }

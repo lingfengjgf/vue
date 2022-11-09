@@ -198,10 +198,13 @@ export default class Watcher implements DepTarget {
   update() {
     /* istanbul ignore else */
     if (this.lazy) {
+      // watch选项或者是this.$watch
       this.dirty = true
     } else if (this.sync) {
+      // 同步执行
       this.run()
     } else {
+      // watcher入队
       queueWatcher(this)
     }
   }

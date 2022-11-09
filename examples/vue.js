@@ -215,8 +215,10 @@ class Observer{
   }
 }
 
+let watcherId = 0;
 class Watcher {
   constructor(vm,expOrFn){
+    this.id = ++watcherId;
     this.vm = vm;
     this.getter = expOrFn;
     // 保存管理的所有dep
@@ -254,8 +256,78 @@ class Watcher {
   }
 
   update(){
+    // this.get();
+    // 异步更新
+    queueWatcher(this);
+  }
+
+  run(){
     this.get();
   }
+}
+
+const queue = []; // 存放待执行的watcher
+const has = {};
+let waiting = false; // 是否正在执行更新
+let flashing = false; // 已在queue队列中的watcher是否已执行完毕
+function queueWatcher(watcher) {
+  let id = watcher.id;
+  if(has[id] != null) {
+    return ;
+  }
+  has[id] = true;
+  queue.push(watcher);
+  // if(!flashing){
+  // }else{
+  //   let i = queue.length - 1;
+    
+  //   queue.splice(i,1,watcher);
+  // }
+  if(!waiting){
+    waiting = true;
+    nextTick(flushSchedulerQueue);
+  }
+}
+
+function flushSchedulerQueue(){
+  let id;
+  flashing = true;
+  for (const watcher of queue) {
+    id = watcher.id;
+    // 清空has.id,对应的watcher可以被重新添加 没有清空queue？
+    has[id] = null;
+
+    // 执行更新
+    watcher.run();
+  }
+  // 状态还原
+  flashing = waiting = false;  
+}
+
+const timerFunc= () => Promise.resolve().then(flushCallbacks);
+
+const callbacks = []; // 存放异步任务
+let pending = false;
+function nextTick(cb){
+  callbacks.push(cb);
+
+  if(!pending){
+    pending = true;
+    timerFunc();
+  }
+}
+
+function flushCallbacks(){
+  pending = false;
+  // 复制一份，防止有新的异步任务进入
+  const copies = callbacks.slice(0);
+  // 清空异步队列
+  callbacks.length = 0;
+
+  for (const cb of copies) {
+    cb();
+  }
+
 }
 
 let uid = 0;
