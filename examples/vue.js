@@ -99,6 +99,17 @@ function proxy(vm, sourceKey, key){
   })
 }
 
+Vue.prototype.$createElement=(tag,data,children)=>{
+  // 根据tag处理元素和文本两种情况
+  if(tag){
+    // element
+    return {tag,data,children};
+  }else{
+    // text
+    return {text:data};
+  }
+}
+
 Vue.prototype.$mount=function(el){
   // parent
   const parent=document.querySelector(el);
@@ -110,12 +121,44 @@ Vue.prototype.$mount=function(el){
       // 清空宿主内容
       parent.innerHTML = '';
       // append
-      const node=this.$options.render.call(this);
-      parent.appendChild(node);
+      // const node=this.$options.render.call(this);
+      // parent.appendChild(node);
+
+      // vnode实现
+      const vnode = this.$options.render.call(this,this.$createElement);
+      createElm(vnode, parent);
   }
 
   // 创建watcher实例，作为当前组件的渲染watcher
   new Watcher(this,updateComponent);
+}
+
+// 递归遍历vnode，创建dom树，追加到parentElm上
+function createElm(vnode, parentElm){
+  // 获取tag,并创建元素
+  const tag = vnode.tag;
+
+  // 获取children，递归处理
+  const children = vnode.children;
+  if (tag) {
+    // elm
+    vnode.elm = document.createElement(tag,vnode);
+    // 先处理子元素
+    if (typeof children === 'string') {
+      // 文本
+      createElm({text:children},vnode.elm);
+    } else if (Array.isArray(children)) {
+      // 元素
+      for (const child of children) {
+        createElm(child,vnode.elm);
+      }
+    }
+    parentElm.appendChild(vnode.elm);
+  } else {
+    // text
+    vnode.elm = document.createTextNode(vnode.text);
+    parentElm.appendChild(vnode.elm);
+  }
 }
 
 // 响应式处理
@@ -302,6 +345,7 @@ function flushSchedulerQueue(){
   }
   // 状态还原
   flashing = waiting = false;  
+  console.log('finish queue:',queue);
 }
 
 const timerFunc= () => Promise.resolve().then(flushCallbacks);

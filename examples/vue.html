@@ -12,20 +12,38 @@
     },
     created(){
       console.log('created!');  
+      this.foo = 'bar',
       setTimeout(()=>{
-        this.foo = 'bar',
+        this.foo = 'baz',
         this.$set(this.obj,"a","a");
         this.arr.push(4);
         this.$delete(this.arr,2);
         this.$set(this.arr,3,6);
       },1000)
-      console.log('arr:',this.arr);
+      setTimeout(()=>{
+        this.foo = 'dong';
+      },5000)
     },
     
-    render(){
+    render(h){
+      // DOM实现
+      // let a=this.obj.a||'';
+      // let arr=this.arr.join(',')
+      // return document.createTextNode(this.foo + a + arr)
+
+      // vnode实现
       let a=this.obj.a||'';
-      let arr=this.arr.join(',')
-      return document.createTextNode(this.foo + a + arr)
+      let arr=this.arr.join(',');
+
+      // 单个文本
+      // return h('',this.foo+a+arr)
+
+      // 嵌套情况
+      return h('div',{},[
+        h('p',{},this.foo+a+arr),
+        h('p',{},this.foo+a+arr),
+        h('p',{},this.foo+a+arr),
+      ])
     }
   }).$mount('#app')
 
