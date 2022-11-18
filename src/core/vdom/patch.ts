@@ -289,7 +289,9 @@ export function createPatchFunction(backend) {
     return isDef(vnode.tag)
   }
 
+  // 处理元素属性
   function invokeCreateHooks(vnode, insertedVnodeQueue) {
+    // cbs是一个对象：{create:[...],update:[...],...}
     for (let i = 0; i < cbs.create.length; ++i) {
       cbs.create[i](emptyNode, vnode)
     }

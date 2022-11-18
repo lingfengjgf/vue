@@ -140,6 +140,9 @@ function createElm(vnode, parentElm){
 
   // 获取children，递归处理
   const children = vnode.children;
+
+  // 获取data，给元素添加属性
+  const data = vnode.data;
   if (tag) {
     // elm
     vnode.elm = document.createElement(tag,vnode);
@@ -151,6 +154,15 @@ function createElm(vnode, parentElm){
       // 元素
       for (const child of children) {
         createElm(child,vnode.elm);
+      }
+    }
+
+    // 处理元素属性
+    if (data) {
+      if (data.attrs) {
+        for (const attr in data.attrs) {
+          vnode.elm.setAttribute(attr,data.attrs[attr]);
+        }
       }
     }
     parentElm.appendChild(vnode.elm);
