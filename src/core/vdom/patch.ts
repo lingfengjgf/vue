@@ -438,12 +438,15 @@ export function createPatchFunction(backend) {
       checkDuplicateKeys(newCh)
     }
 
+    // 循环条件：起始游标不能超过结尾游标
     while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
+      // 先进行游标调整，因为在循环过程中可能会有节点的移动和删除
       if (isUndef(oldStartVnode)) {
         oldStartVnode = oldCh[++oldStartIdx] // Vnode has been moved left
       } else if (isUndef(oldEndVnode)) {
         oldEndVnode = oldCh[--oldEndIdx]
       } else if (sameVnode(oldStartVnode, newStartVnode)) {
+        // 老的开始节点和新的开始节点相同
         patchVnode(
           oldStartVnode,
           newStartVnode,
@@ -454,6 +457,7 @@ export function createPatchFunction(backend) {
         oldStartVnode = oldCh[++oldStartIdx]
         newStartVnode = newCh[++newStartIdx]
       } else if (sameVnode(oldEndVnode, newEndVnode)) {
+        // 老的结尾节点和新的结尾节点相同
         patchVnode(
           oldEndVnode,
           newEndVnode,
@@ -465,6 +469,7 @@ export function createPatchFunction(backend) {
         newEndVnode = newCh[--newEndIdx]
       } else if (sameVnode(oldStartVnode, newEndVnode)) {
         // Vnode moved right
+        // 老的开始节点和新的结尾节点相同
         patchVnode(
           oldStartVnode,
           newEndVnode,
@@ -482,6 +487,7 @@ export function createPatchFunction(backend) {
         newEndVnode = newCh[--newEndIdx]
       } else if (sameVnode(oldEndVnode, newStartVnode)) {
         // Vnode moved left
+        // 老的结尾节点和新的开始节点相同
         patchVnode(
           oldEndVnode,
           newStartVnode,
@@ -494,12 +500,15 @@ export function createPatchFunction(backend) {
         oldEndVnode = oldCh[--oldEndIdx]
         newStartVnode = newCh[++newStartIdx]
       } else {
+        // 正常查找
+        // 从新数组的开头拿出一个节点去老数组中查找相同节点
         if (isUndef(oldKeyToIdx))
           oldKeyToIdx = createKeyToOldIdx(oldCh, oldStartIdx, oldEndIdx)
         idxInOld = isDef(newStartVnode.key)
           ? oldKeyToIdx[newStartVnode.key]
           : findIdxInOld(newStartVnode, oldCh, oldStartIdx, oldEndIdx)
         if (isUndef(idxInOld)) {
+          // 没找到，创建
           // New element
           createElm(
             newStartVnode,
@@ -511,6 +520,7 @@ export function createPatchFunction(backend) {
             newStartIdx
           )
         } else {
+          // 找到了，则更新
           vnodeToMove = oldCh[idxInOld]
           if (sameVnode(vnodeToMove, newStartVnode)) {
             patchVnode(
@@ -543,7 +553,9 @@ export function createPatchFunction(backend) {
         newStartVnode = newCh[++newStartIdx]
       }
     }
+    // 循环结束
     if (oldStartIdx > oldEndIdx) {
+      // 老数组结束，新数组有剩余，批量创建
       refElm = isUndef(newCh[newEndIdx + 1]) ? null : newCh[newEndIdx + 1].elm
       addVnodes(
         parentElm,
@@ -554,6 +566,7 @@ export function createPatchFunction(backend) {
         insertedVnodeQueue
       )
     } else if (newStartIdx > newEndIdx) {
+      // 新数组结束，老数组有剩余，批量删除
       removeVnodes(oldCh, oldStartIdx, oldEndIdx)
     }
   }
@@ -631,13 +644,16 @@ export function createPatchFunction(backend) {
       i(oldVnode, vnode)
     }
 
+    // 获取新旧两组子元素
     const oldCh = oldVnode.children
     const ch = vnode.children
     if (isDef(data) && isPatchable(vnode)) {
       for (i = 0; i < cbs.update.length; ++i) cbs.update[i](oldVnode, vnode)
       if (isDef((i = data.hook)) && isDef((i = i.update))) i(oldVnode, vnode)
     }
+    // 新节点没有text
     if (isUndef(vnode.text)) {
+      // 双方都有子元素，diff算法比对两组子元素
       if (isDef(oldCh) && isDef(ch)) {
         if (oldCh !== ch)
           updateChildren(elm, oldCh, ch, insertedVnodeQueue, removeOnly)
@@ -645,11 +661,14 @@ export function createPatchFunction(backend) {
         if (__DEV__) {
           checkDuplicateKeys(ch)
         }
+        // 新节点有子元素，老节点没有
         if (isDef(oldVnode.text)) nodeOps.setTextContent(elm, '')
         addVnodes(elm, null, ch, 0, ch.length - 1, insertedVnodeQueue)
       } else if (isDef(oldCh)) {
+        // 老节点有子元素
         removeVnodes(oldCh, 0, oldCh.length - 1)
       } else if (isDef(oldVnode.text)) {
+        // 老节点是文本
         nodeOps.setTextContent(elm, '')
       }
     } else if (oldVnode.text !== vnode.text) {

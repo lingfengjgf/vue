@@ -112,29 +112,173 @@ Vue.prototype.$createElement=(tag,data,children)=>{
 
 Vue.prototype.$mount=function(el){
   // parent
-  const parent=document.querySelector(el);
+  this.$el=document.querySelector(el);
   // data
   // const data=this._data;
 
   const updateComponent=()=>{
 
       // 清空宿主内容
-      parent.innerHTML = '';
+      // parent.innerHTML = '';
       // append
       // const node=this.$options.render.call(this);
       // parent.appendChild(node);
 
       // vnode实现
       const vnode = this.$options.render.call(this,this.$createElement);
-      createElm(vnode, parent);
+      // createElm(vnode, parent);
+      this._update(vnode);
   }
 
   // 创建watcher实例，作为当前组件的渲染watcher
   new Watcher(this,updateComponent);
 }
 
+Vue.prototype._update = function(vnode){
+  // 获取上次计算出的vnode
+  const prevVnode = this._vnode;
+  // 保存最新的计算结果
+  this._vnode = vnode;
+  if(!prevVnode){
+    // init
+    this.patch(this.$el, vnode);
+  }else{
+    // update
+    this.patch(prevVnode, vnode);
+  }
+}
+
+Vue.prototype.patch = function(oldVnode, vnode){
+  if(oldVnode.nodeType){
+    // 如果oldVnde是真实dom，走初始化
+    createElm(vnode, oldVnode)
+  }else{
+    // 如果oldVnde是虚拟dom，走更新
+    patchVnode(oldVnode, vnode);
+  }
+}
+
+function patchVnode(oldVnode, vnode){
+  // 更新目标dom
+  const elm = vnode.elm = oldVnode.elm;
+
+  // 获取双方孩子元素
+  const oldCh = oldVnode.children;
+  const ch = vnode.children;
+
+  if(isUndef(vnode.text)){
+    if(isDef(ch) && isDef(oldCh)){
+      // diff 比对传入的两组子元素
+      updateChildren(elm, oldCh, ch);
+    }
+  }else if(vnode.text !== oldVnode.text){
+    elm.textContent = vnode.text;
+  }
+}
+
+function updateChildren(parentElm, oldCh, newCh){
+  // 新旧首尾4个索引和对应节点
+  let oldStartIdx = 0;
+  let newStartIdx = 0;
+  let oldEndIdx = oldCh.length - 1;
+  let newEndIdx = newCh.length - 1;
+  let oldStartVnode = oldCh[0];
+  let newStartVnode = newCh[0];
+  let oldEndVnode = oldCh[oldEndIdx];
+  let newEndVnode = newCh[newEndIdx];
+
+  // 查找相同节点时所需变量
+  // oldkeyToIdx 缓存节点key,优化查找速度；idxInOld 保存查找节点索引；
+  // vnodeToMove 保存要更新的节点；refElm 参考节点，节点应该移动的位置
+  let oldkeyToIdx, idxInOld, vnodeToMove, refElm;
+
+  while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
+    if (isUndef(oldStartVnode)) {
+      oldStartVnode = oldCh[++oldStartIdx];
+    } else if (isUndef(oldEndVnode)) {
+      oldEndVnode = oldCh[--oldEndIdx];
+    } else if (sameVnode(oldStartVnode, newStartVnode)){
+      patchVnode(oldStartVnode, newStartVnode);
+      oldStartVnode = oldCh[++oldStartIdx];
+      newStartVnode = newCh[++newStartIdx];
+    } else if (sameVnode(oldEndVnode, newEndVnode)){
+      patchVnode(oldEndVnode, newEndVnode);
+      oldEndVnode = oldCh[--oldEndIdx];
+      newEndVnode = newCh[--newEndIdx];
+    } else if (sameVnode(oldStartVnode, newEndVnode)){
+      patchVnode(oldStartVnode, newEndVnode);
+      parentElm.insertBefore(oldStartVnode.elm, oldEndVnode.elm.nextSibling);
+      oldStartVnode = oldCh[++oldStartIdx];
+      newEndVnode = newCh[--newEndIdx];
+    } else if (sameVnode(oldEndVnode, newStartVnode)){
+      patchVnode(oldEndVnode, newStartVnode);
+      parentElm.insertBefore(oldEndVnode.elm, oldStartVnode.elm.nextSibling);
+      oldEndVnode = oldCh[--oldEndIdx];
+      newStartVnode = newCh[++newStartIdx];
+    } else {
+      if (isUndef(oldkeyToIdx)) {
+        oldkeyToIdx = createKeyToOldIdx(oldCh, oldStartIdx, oldEndIdx);
+      }
+      idxInOld = isDef(newStartVnode.key)?oldkeyToIdx[newStartVnode.key]:findIdxInOld(newStartVnode, oldCh, oldStartIdx, oldEndIdx);
+      if(isUndef(idxInOld)){
+        createElm(newStartVnode, parentElm, oldStartVnode.elm);
+      } else {
+        vnodeToMove = oldCh[idxInOld];
+        patchVnode(vnodeToMove, newStartVnode);
+        oldCh[idxInOld] = undefined;
+        parentElm.insertBefore(vnodeToMove.elm, oldStartVnode.elm);
+      }
+      newStartVnode = newCh[++newStartIdx];
+    }
+  }
+
+  if(oldStartIdx > oldEndIdx) {
+    refElm = isUndef(newCh[newEndIdx + 1]) ? null :newCh[newEndIdx + 1].elm;
+    for(; newStartIdx<=newEndIdx;++newStartIdx){
+      createElm(newCh[newStartIdx], parentElm, refElm);
+    }
+  } else if (newStartIdx > newEndIdx) {
+    for(; oldStartIdx<=oldEndIdx;++oldStartIdx){
+      const el = oldCh[oldStartIdx];
+      const parent = el.parentNode;
+      if (isDef(parent)) {
+        parent.removeChild(el);
+      }
+    }    
+  }
+}
+
+function isUndef(v) {
+  return v === undefined || v ===null;
+}
+
+function isDef(v) {
+  return v != undefined || v !=null;
+}
+
+function sameVnode(a,b) {
+  return a.key === b.key && a.tag === b.tag;
+}
+
+function createKeyToOldIdx(children, beginIdx, endIdx){
+  let i, key
+  const map = {}
+  for (i = beginIdx; i <= endIdx; ++i) {
+    key = children[i].key
+    if (isDef(key)) map[key] = i
+  }
+  return map
+}
+
+function findIdxInOld(node, oldCh, start, end){
+  for (let i = start; i < end; i++) {
+    const c = oldCh[i]
+    if (isDef(c) && sameVnode(node, c)) return i
+  }
+}
+
 // 递归遍历vnode，创建dom树，追加到parentElm上
-function createElm(vnode, parentElm){
+function createElm(vnode, parentElm, refElm = null){
   // 获取tag,并创建元素
   const tag = vnode.tag;
 
@@ -165,12 +309,13 @@ function createElm(vnode, parentElm){
         }
       }
     }
-    parentElm.appendChild(vnode.elm);
+    // parentElm.appendChild(vnode.elm);
   } else {
     // text
     vnode.elm = document.createTextNode(vnode.text);
-    parentElm.appendChild(vnode.elm);
+    // parentElm.appendChild(vnode.elm);
   }
+  parentElm.insertBefore(vnode.elm, refElm);
 }
 
 // 响应式处理

@@ -40,9 +40,9 @@
 
       // 嵌套情况
       return h('div',{attrs:{id:'box',title:'列表'}},[
-        h('p',{},this.foo+a+arr),
-        h('p',{},this.foo+a+arr),
-        h('p',{},this.foo+a+arr),
+        h('p',{},[h('',this.foo+a+arr)]),
+        h('p',{},[h('',this.foo+a+arr)]),
+        h('p',{},[h('',this.foo+a+arr)]),
       ])
     }
   }).$mount('#app')
