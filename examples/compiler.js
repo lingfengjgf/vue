@@ -138,4 +138,43 @@ function parseInterpolation(context){
   }
 }
 
+// 代码生成
+// with(this){ return _c('div',[...]) }
+function generate(ast){
+  const code = genNode(ast[0]);
+  return `with(this){ return ${code} }`
+}
+
+function genNode(ast){
+  if (ast.type === 'Element') {
+    return genElement(ast);
+  } else if(ast.type === 'Text'){
+    return genText(ast);
+  } else if(ast.type === 'Interpolation'){
+    return genText(ast.content);
+  }
+  return '';
+}
+
+function genElement(el){
+  const tag = `'${el.tag}'`;
+  const children = genChildren(el);
+  return `_c(${tag}${children?`,${children}`:''})`
+}
+
+function genChildren(el){
+  const children = el.children;
+  if(children){
+    return `[${children.map(c=>genNode(c)).join(',')}]`
+  }else{
+    return ''
+  }
+}
+
+function genText(text){
+  const content = text.type === 'Expression' ? text.content : `'${text.content}'`;
+  return `_v(${content})`;
+}
+
 console.log(JSON.stringify(parse('<div><span>num:{{num}}</span></div>'),false, ' '))
+console.log(generate(parse('<div><span>num:{{num}}</span></div>')))
